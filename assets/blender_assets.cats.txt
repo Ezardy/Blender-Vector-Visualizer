@@ -1,0 +1,4 @@
+# Asset Catalog Definition File
+VERSION 1
+
+9b930084-69fa-4efa-914a-d6df09d23541:GP Arrows:GP Arrows
