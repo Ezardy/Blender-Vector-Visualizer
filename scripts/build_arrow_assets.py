@@ -105,6 +105,7 @@ if not mat.is_grease_pencil:bpy.data.materials.create_gpencil_data(mat)
 mat.grease_pencil.color=(1,1,1,1);mat.grease_pencil.show_fill=False
 sm=node(arrow,'GeometryNodeSetMaterial');sm.inputs['Material'].default_value=mat;link(arrow,gp.outputs[0],sm.inputs['Geometry'])
 col=node(arrow,'GeometryNodeSetGreasePencilColor');col.mode='STROKE';link(arrow,sm.outputs[0],col.inputs[0]);link(arrow,i.outputs['Color'],col.inputs['Color']);link(arrow,i.outputs['Opacity'],col.inputs['Opacity'])
+shaftgeo=store(arrow,col.outputs[0],'gp_arrow_shaft','BOOLEAN',True)
 # A genuine cone converted face-by-face to cyclic filled GP strokes.
 cone=node(arrow,'GeometryNodeMeshCone','Conical arrowhead');cone.inputs['Vertices'].default_value=32;cone.inputs['Radius Top'].default_value=0
 link(arrow,math(arrow,'MULTIPLY',i.outputs['Head Width'],.5),cone.inputs['Radius Bottom']);link(arrow,headlen,cone.inputs['Depth'])
@@ -121,6 +122,7 @@ if not fillmat.is_grease_pencil:bpy.data.materials.create_gpencil_data(fillmat)
 fillmat.grease_pencil.show_stroke=False;fillmat.grease_pencil.show_fill=True;fillmat.grease_pencil.fill_color=(1,1,1,1)
 cm=node(arrow,'GeometryNodeSetMaterial');cm.inputs['Material'].default_value=fillmat;link(arrow,fid.outputs[0],cm.inputs['Geometry'])
 cc=node(arrow,'GeometryNodeSetGreasePencilColor');cc.mode='FILL';link(arrow,cm.outputs[0],cc.inputs[0]);link(arrow,i.outputs['Color'],cc.inputs['Color']);link(arrow,i.outputs['Opacity'],cc.inputs['Opacity'])
+headgeo=store(arrow,cc.outputs[0],'gp_arrow_head','BOOLEAN',True)
 # Reuse the same text asset as the existing axis labels.
 label_group=bpy.data.node_groups.get('GP Arrow • Label (GP Text Nodes 5.2)')
 if not label_group:
@@ -137,16 +139,19 @@ for name,typ,val in [('gp_arrow_label','BOOLEAN',True),('gp_arrow_face_camera','
     else:labelstore.inputs['Value'].default_value=val
     labelgeo=labelstore.outputs[0]
 label=switch(arrow,'GEOMETRY',i.outputs['Show Label'],None,labelgeo)
-allgeo=node(arrow,'GeometryNodeJoinGeometry','Shaft, cone, and optional label');link(arrow,col.outputs[0],allgeo.inputs[0]);link(arrow,switch(arrow,'GEOMETRY',i.outputs['Show Arrowhead'],None,cc.outputs[0]),allgeo.inputs[0]);link(arrow,label,allgeo.inputs[0])
+allgeo=node(arrow,'GeometryNodeJoinGeometry','Shaft, cone, and optional label');link(arrow,shaftgeo,allgeo.inputs[0]);link(arrow,switch(arrow,'GEOMETRY',i.outputs['Show Arrowhead'],None,headgeo),allgeo.inputs[0]);link(arrow,label,allgeo.inputs[0])
 nonzero=math(arrow,'GREATER_THAN',length,0.000001)
 arrowgeo=store(arrow,allgeo.outputs[0],'gp_arrow_start','FLOAT_VECTOR',a)
 arrowgeo=store(arrow,arrowgeo,'gp_arrow_end','FLOAT_VECTOR',b)
+arrowgeo=store(arrow,arrowgeo,'gp_arrow_head_length','FLOAT',switch(arrow,'FLOAT',i.outputs['Show Arrowhead'],0.,headlen))
 link(arrow,switch(arrow,'GEOMETRY',nonzero,None,arrowgeo),o.inputs['Arrow'])
 link(arrow,a,o.inputs['Start Position']);link(arrow,b,o.inputs['End Position'])
 
 proj=group('GP Arrow • Project onto Plane','Project the incoming arrow onto the host local XY plane through the host origin (local Z=0). The plane follows host location, rotation, parenting, and scale. Camera-facing labels retain their orientation at the projected tip; other labels lie on local XY.')
 sock(proj,'Arrow','Geometry',out=True);sock(proj,'Valid Plane','Bool',out=True)
 sock(proj,'Arrow','Geometry')
+sock(proj,'Create Start Empty','Bool',True,desc='Create/update a real child Empty at the projected start. Requires GP Arrow Objects.')
+sock(proj,'Create End Empty','Bool',True,desc='Create/update a real child Empty at the projected tip. Requires GP Arrow Objects.')
 for s in list(proj.interface.items_tree):
     if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name in ['Plane U','Plane V','Plane Origin']:proj.interface.remove(s)
 i=node(proj,'NodeGroupInput');o=node(proj,'NodeGroupOutput')
@@ -169,6 +174,22 @@ planey=vm(proj,'CROSS_PRODUCT',normal,u)
 planarlabel=vm(proj,'ADD',projectedtip,vm(proj,'ADD',scale(proj,u,vm(proj,'DOT_PRODUCT',relative,(1,0,0))),scale(proj,planey,vm(proj,'DOT_PRODUCT',relative,(0,1,0)))))
 labelposition=switch(proj,'VECTOR',attrs['gp_arrow_face_camera'],planarlabel,labelpos)
 position=switch(proj,'VECTOR',attrs['gp_arrow_label'],position,labelposition)
+# Rotate the original cone onto the projected axis, retaining its circular 3D base.
+source_start=named(proj,'gp_arrow_start','FLOAT_VECTOR');source_end=named(proj,'gp_arrow_end','FLOAT_VECTOR')
+source_delta=vm(proj,'SUBTRACT',source_end,source_start);source_length=vm(proj,'LENGTH',source_delta);source_axis=vm(proj,'NORMALIZE',source_delta)
+target_start=vm(proj,'SUBTRACT',source_start,scale(proj,normal,vm(proj,'DOT_PRODUCT',source_start,normal)))
+target_end=vm(proj,'SUBTRACT',source_end,scale(proj,normal,vm(proj,'DOT_PRODUCT',source_end,normal)))
+target_delta=vm(proj,'SUBTRACT',target_end,target_start);target_length=vm(proj,'LENGTH',target_delta);target_axis=vm(proj,'NORMALIZE',target_delta)
+old_head_length=named(proj,'gp_arrow_head_length','FLOAT');new_head_length=math(proj,'MINIMUM',old_head_length,math(proj,'MULTIPLY',target_length,.45))
+relative_head=vm(proj,'SUBTRACT',p,source_end);axial=scale(proj,source_axis,vm(proj,'DOT_PRODUCT',relative_head,source_axis))
+reshaped=vm(proj,'ADD',vm(proj,'SUBTRACT',relative_head,axial),scale(proj,axial,math(proj,'DIVIDE',new_head_length,old_head_length)))
+rotate=node(proj,'ShaderNodeVectorRotate','Keep the cone three dimensional');rotate.rotation_type='AXIS_ANGLE';link(proj,reshaped,rotate.inputs['Vector']);link(proj,vm(proj,'NORMALIZE',vm(proj,'CROSS_PRODUCT',source_axis,target_axis)),rotate.inputs['Axis']);link(proj,math(proj,'ARCCOSINE',math(proj,'MINIMUM',1.,math(proj,'MAXIMUM',-1.,vm(proj,'DOT_PRODUCT',source_axis,target_axis))),0),rotate.inputs['Angle'])
+head_position=vm(proj,'ADD',target_end,rotate.outputs['Vector'])
+target_base=vm(proj,'SUBTRACT',target_end,scale(proj,target_axis,new_head_length))
+shaft_factor=math(proj,'DIVIDE',vm(proj,'DOT_PRODUCT',vm(proj,'SUBTRACT',p,source_start),source_axis),math(proj,'SUBTRACT',source_length,old_head_length))
+shaft_position=vm(proj,'ADD',target_start,scale(proj,vm(proj,'SUBTRACT',target_base,target_start),shaft_factor))
+position=switch(proj,'VECTOR',named(proj,'gp_arrow_shaft','BOOLEAN'),position,shaft_position)
+position=switch(proj,'VECTOR',named(proj,'gp_arrow_head','BOOLEAN'),position,head_position)
 curves=node(proj,'GeometryNodeGreasePencilToCurves','Bake layer transforms before projection');curves.inputs['Layers as Instances'].default_value=False;link(proj,i.outputs['Arrow'],curves.inputs[0])
 real=node(proj,'GeometryNodeRealizeInstances');link(proj,curves.outputs[0],real.inputs[0])
 setp=node(proj,'GeometryNodeSetPosition');link(proj,real.outputs[0],setp.inputs['Geometry']);link(proj,position,setp.inputs['Position'])
@@ -179,7 +200,11 @@ for attrname in ['gp_arrow_start','gp_arrow_end']:
     projectedendpoint=vm(proj,'SUBTRACT',endpoint,scale(proj,normal,vm(proj,'DOT_PRODUCT',vm(proj,'SUBTRACT',endpoint,origin),normal)))
     projectedgeo=store(proj,projectedgeo,attrname,'FLOAT_VECTOR',projectedendpoint)
 projectedgeo=store(proj,projectedgeo,'gp_arrow_tip','FLOAT_VECTOR',projectedtip)
-link(proj,switch(proj,'GEOMETRY',valid,i.outputs['Arrow'],projectedgeo),o.inputs['Arrow']);link(proj,valid,o.inputs['Valid Plane'])
+projectedgeo=store(proj,projectedgeo,'gp_arrow_head_length','FLOAT',new_head_length)
+projectedgeo=store(proj,projectedgeo,'gp_arrow_create_start','BOOLEAN',i.outputs['Create Start Empty'])
+projectedgeo=store(proj,projectedgeo,'gp_arrow_create_end','BOOLEAN',i.outputs['Create End Empty'])
+delete=node(proj,'GeometryNodeDeleteGeometry','Hide a zero-length projected vector');delete.domain='POINT';link(proj,projectedgeo,delete.inputs['Geometry']);link(proj,math(proj,'LESS_THAN',target_length,.000001),delete.inputs['Selection'])
+link(proj,delete.outputs[0],o.inputs['Arrow']);link(proj,valid,o.inputs['Valid Plane'])
 
 parallel=group('GP Arrow • Parallel from Origin','Reposition the incoming GP Arrow geometry at this host origin. Stack after GP Arrow or GP Projection on the same object. Reverse Direction flips the vector; Length controls its length unless Use Source Length is on. Preserves styling and readable labels.')
 sock(parallel,'Arrow','Geometry',out=True)
@@ -189,6 +214,7 @@ sock(parallel,'Arrow','Geometry',desc='Incoming geometry from the previous GP Ar
 sock(parallel,'Reverse Direction','Bool',False)
 sock(parallel,'Length','Float',1.0,desc='Desired length in host local units, when Use Source Length is off.')
 sock(parallel,'Use Source Length','Bool',False)
+sock(parallel,'Create End Empty','Bool',True)
 parallel.interface.move(next(s for s in parallel.interface.items_tree if s.item_type=='SOCKET' and s.name=='Arrow' and s.in_out=='INPUT'),1)
 i=node(parallel,'NodeGroupInput');o=node(parallel,'NodeGroupOutput')
 cv=node(parallel,'GeometryNodeGreasePencilToCurves','Bake incoming layer transforms');cv.inputs['Layers as Instances'].default_value=False;link(parallel,i.outputs['Arrow'],cv.inputs[0])
@@ -211,6 +237,8 @@ back=node(parallel,'GeometryNodeCurvesToGreasePencil');back.inputs['Instances as
 geo=store(parallel,back.outputs[0],'gp_arrow_start','FLOAT_VECTOR',(0,0,0))
 geo=store(parallel,geo,'gp_arrow_end','FLOAT_VECTOR',tip)
 geo=store(parallel,geo,'gp_arrow_tip','FLOAT_VECTOR',tip)
+geo=store(parallel,geo,'gp_arrow_head_length','FLOAT',math(parallel,'MULTIPLY',named(parallel,'gp_arrow_head_length','FLOAT'),math(parallel,'DIVIDE',length,srclen)))
+geo=store(parallel,geo,'gp_arrow_create_end','BOOLEAN',i.outputs['Create End Empty'])
 valid=math(parallel,'MULTIPLY',math(parallel,'GREATER_THAN',srclen,.000001),math(parallel,'GREATER_THAN',length,.000001))
 link(parallel,switch(parallel,'GEOMETRY',valid,None,geo),o.inputs['Arrow'])
 
@@ -222,6 +250,7 @@ sock(surface,'Distance','Float',out=True,desc='Distance from host origin to surf
 sock(surface,'Surface Object','Object')
 sock(surface,'Length','Float',1.0)
 sock(surface,'Reverse Direction','Bool',False)
+sock(surface,'Create End Empty','Bool',True)
 styles=['Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
 for name in styles:
     s=next(s for s in arrow.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==name)
@@ -248,6 +277,7 @@ draw=node(surface,'GeometryNodeGroup','Draw with GP Arrow');draw.node_tree=arrow
 for name in styles:link(surface,i.outputs[name],draw.inputs[name])
 geo=store(surface,draw.outputs['Arrow'],'gp_surface_point','FLOAT_VECTOR',point.outputs[0])
 geo=store(surface,geo,'gp_surface_normal','FLOAT_VECTOR',direction)
+geo=store(surface,geo,'gp_arrow_create_end','BOOLEAN',i.outputs['Create End Empty'])
 link(surface,switch(surface,'GEOMETRY',sample.outputs['Is Valid'],None,geo),o.inputs['Arrow'])
 link(surface,point.outputs[0],o.inputs['Closest Point']);link(surface,direction,o.inputs['Surface Normal']);link(surface,near.outputs['Distance'],o.inputs['Distance'])
 
@@ -257,6 +287,7 @@ sock(perp,'Valid Plane','Bool',out=True)
 for name in ['Vector 1 Start','Vector 1 End','Vector 2 Start','Vector 2 End']:sock(perp,name,'Object')
 sock(perp,'Length','Float',1.)
 sock(perp,'Reverse Direction','Bool',False)
+sock(perp,'Create End Empty','Bool',True)
 for name in styles:
     s=next(s for s in arrow.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==name)
     default=s.default_value
@@ -283,7 +314,8 @@ direction=scale(perp,vm(perp,'NORMALIZE',local.outputs[0]),switch(perp,'FLOAT',i
 tip=scale(perp,direction,i.outputs['Length'])
 draw=node(perp,'GeometryNodeGroup','Draw with GP Arrow');draw.node_tree=arrow;draw.inputs['Use Positions'].default_value=True;draw.inputs['Start'].default_value=(0,0,0);link(perp,tip,draw.inputs['End'])
 for name in styles:link(perp,i.outputs[name],draw.inputs[name])
-link(perp,switch(perp,'GEOMETRY',valid,None,draw.outputs['Arrow']),o.inputs['Arrow']);link(perp,direction,o.inputs['Direction']);link(perp,valid,o.inputs['Valid Plane'])
+geo=store(perp,draw.outputs['Arrow'],'gp_arrow_create_end','BOOLEAN',i.outputs['Create End Empty'])
+link(perp,switch(perp,'GEOMETRY',valid,None,geo),o.inputs['Arrow']);link(perp,direction,o.inputs['Direction']);link(perp,valid,o.inputs['Valid Plane'])
 
 intersection=group('GP Arrow • Segment Intersection','Find the first hit on Check Object between Start Object and End Object, including evaluated mesh modifiers. The GP Arrow Objects companion creates a real child Empty at the hit. No hit hides the managed Empty.')
 sock(intersection,'Geometry','Geometry',out=True);sock(intersection,'Hit','Bool',out=True);sock(intersection,'Hit Point','Vector',out=True,desc='Intersection in host local coordinates.');sock(intersection,'Distance','Float',out=True,desc='Distance from Start in world units.')
@@ -311,6 +343,17 @@ link(intersection,switch(intersection,'GEOMETRY',valid,None,geo),o.inputs['Geome
 for g in [parallel,surface,perp]:g['gp_arrow_output_role']='endpoint'
 proj['gp_arrow_output_role']='projected_endpoints'
 intersection['gp_arrow_output_role']='intersection'
+# Existing modifiers receive Blender's initial False for newly added bool sockets.
+# Migrate once to preserve their previous automatic-empty behavior.
+for g,names in [(proj,['Create Start Empty','Create End Empty']),(parallel,['Create End Empty']),(surface,['Create End Empty']),(perp,['Create End Empty'])]:
+    if not g.get('gp_arrow_empty_options_version'):
+        for obj in bpy.data.objects:
+            for mod in obj.modifiers:
+                if mod.type=='NODES' and mod.node_group==g:
+                    for s in g.interface.items_tree:
+                        if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name in names:
+                            getattr(mod.properties.inputs,s.identifier).value=True
+        g['gp_arrow_empty_options_version']=1
 order=['Arrow','Start Position','End Position','Start Object','End Object','Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
 for index,name in enumerate(order):
     s=next((s for s in arrow.interface.items_tree if s.item_type=='SOCKET' and s.name==name),None)

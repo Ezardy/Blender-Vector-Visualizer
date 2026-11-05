@@ -10,6 +10,8 @@ The **GP Arrow Objects** companion add-on (`gp_arrow_objects.zip` in release bun
 
 Managed child empties are named **Host • Start**, **Host • End**, or **Host • Intersection**, parented to the host, and follow its final evaluated output. Projection creates both Start and End at the projected endpoints on local XY, independent of label position. Normal, Parallel, and Perpendicular create End. They are usable in other object inputs. Each child exposes **GP Arrow Valid**. Invalid/degenerate outputs hide the child and mark it false while preserving its last valid transform. Do not feed a managed child back into the same host's calculations, which would create a dependency cycle.
 
+Empty creation is optional: Projection provides independent **Create Start Empty** and **Create End Empty** switches. Normal, Parallel, and Perpendicular provide **Create End Empty**. They default on for compatibility with existing setups. Turning a switch off prevents new objects from being created; an existing managed child is hidden, marked invalid, and no longer follows the arrow, while remaining available to preserve object references. Enable the switch to resume tracking. Segment Intersection still produces its managed intersection object.
+
 The add-on updates after scene edits (with a short debounce), on frame changes, and before saving. Its role tags survive duplicated node groups, and supported node assets embedded inside wrapper groups are detected. Disabling/removing the relevant modifier hides its managed output rather than deleting objects that may have other references.
 
 ## GP Arrow • Object to Object
@@ -24,9 +26,9 @@ Enable **Show Label**, enter **Label**, and set its size and offset from the tip
 
 Connect the first asset's **Arrow** output into this asset's **Arrow** input, or add it as the next modifier on the same Grease Pencil object.
 
-The plane is automatically the **host object's local XY plane**, centered on the host object's origin: U is local X, V is local Y, and the plane origin is local (0, 0, 0). Projection sets local Z to zero. Move or rotate the host to position/orient the plane in the scene; parenting and scale are respected. There are no manual Plane U, Plane V, or Plane Origin inputs.
+The plane is automatically the **host object's local XY plane**, centered on the host object's origin: U is local X, V is local Y, and the plane origin is local (0, 0, 0). The shaft and endpoint positions have local Z zero; the cone retains its three-dimensional width. Move or rotate the host to position/orient the plane in the scene; parenting and scale are respected. There are no manual Plane U, Plane V, or Plane Origin inputs.
 
-The shaft and cone are orthogonally projected, preserving thickness and color and combining the output layers. An arrow normal to the plane collapses under geometric projection. Labels have two modes, controlled by **Face Camera** on the arrow generator:
+The shaft is projected onto local XY. The head remains a **three-dimensional cone** aligned with the projected shaft, preserving its circular base width and color. Head length is capped at 45% of the projected vector length, and the shaft ends at its cone base. The head can extend above and below the XY plane. An arrow normal to the plane has zero projected length and produces empty geometry. Labels have two modes, controlled by **Face Camera** on the arrow generator:
 
 - **On:** move the label to the projected tip, retaining its camera-facing orientation and 3D offset. Its letters are not projected onto the plane.
 - **Off:** place the label flat on host local XY, preserving letter shapes and size. Local X defines text right and local Y defines text up. Label Offset X/Y follow these axes; Z is ignored so the label lies in the plane.

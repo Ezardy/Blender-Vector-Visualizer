@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-bl_info = {'name': 'GP Arrow Objects', 'author': 'Blender Visualizer', 'version': (1, 0, 1), 'blender': (5, 2, 0), 'category': 'Object', 'description': 'Maintain real child empties for GP Arrow endpoints and segment intersections.'}
+bl_info = {'name': 'GP Arrow Objects', 'author': 'Blender Visualizer', 'version': (1, 0, 2), 'blender': (5, 2, 0), 'category': 'Object', 'description': 'Maintain optional real child empties for GP Arrow endpoints and segment intersections.'}
 
 import bpy
 from bpy.app.handlers import persistent
@@ -40,6 +40,21 @@ def _point(evaluated, attribute):
                 return Vector(a.data[0].vector)
     return None
 
+def _option(host, evaluated, attribute, socket):
+    for layer in evaluated.data.layers:
+        for frame in layer.frames:
+            a=frame.drawing.attributes.get(attribute)
+            if a and len(a.data):
+                return bool(a.data[0].value)
+    # Empty geometry has no attributes, so also honor the modifier inputs directly.
+    for m in reversed(list(host.modifiers)):
+        if m.type!='NODES' or not m.node_group or not m.show_viewport:
+            continue
+        s=next((s for s in m.node_group.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==socket),None)
+        if s:
+            return bool(getattr(m.properties.inputs,s.identifier).value)
+    return True
+
 def _child(host, role):
     child = next((o for o in host.children if o.type == 'EMPTY' and o.get(ROLE) == role), None)
     if child is None:
@@ -78,16 +93,16 @@ def update_now(scene=None, depsgraph=None):
                 if m.type == 'NODES' and m.node_group and m.show_viewport:
                     output_roles.update(_roles(m.node_group))
             roles = []
-            if 'projected_endpoints' in output_roles:
+            ev = host.evaluated_get(depsgraph)
+            if 'projected_endpoints' in output_roles and _option(host,ev,'gp_arrow_create_start','Create Start Empty'):
                 roles.append(('startpoint', 'gp_arrow_start'))
-            if 'endpoint' in output_roles or 'projected_endpoints' in output_roles:
+            if ('endpoint' in output_roles or 'projected_endpoints' in output_roles) and _option(host,ev,'gp_arrow_create_end','Create End Empty'):
                 roles.append(('endpoint', 'gp_arrow_end'))
             if 'intersection' in output_roles:
                 roles.append(('intersection', 'gp_intersection_point'))
             roles.extend((o.get(ROLE), None) for o in host.children if o.get(ROLE) and o.get(ROLE) not in {r[0] for r in roles})
             if not roles:
                 continue
-            ev = host.evaluated_get(depsgraph)
             for role, attr in roles:
                 child = _child(host, role)
                 point = _point(ev, attr) if attr else None
