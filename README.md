@@ -23,6 +23,8 @@ The arrow geometry works without the companion; managed Start/End/Intersection o
 
 Projected arrows retain 3D cone heads on their XY-projected shafts. Projection has independent **Create Start Empty** / **Create End Empty** switches; Normal, Parallel, and Perpendicular also have **Create End Empty** controls.
 
+Enable **Show Label → Vector Sign** to add a fitted right-pointing vector arrow above the label. It follows label size, color, opacity, and camera-facing/planar orientation. Object to Object, Surface Normal, Perpendicular, and Angle Arc expose the switch; Projection and Parallel inherit the source label's setting.
+
 See [the full asset guide](docs/USAGE.md). Open [the clean demo](examples/gp_arrows_demo.blend) for working examples of all seven assets. The original personal working scene is excluded from Git.
 
 ## Repository layout

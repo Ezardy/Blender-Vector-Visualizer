@@ -2,6 +2,12 @@
 """Build the GP angle arc without rebuilding the existing arrow assets."""
 import bpy
 from math import pi
+from pathlib import Path
+
+sign_script=Path(__file__).resolve().parent/'build_vector_sign.py'
+if sign_script.exists():
+    sign_ns={'__file__':str(sign_script),'__name__':'__main__'}
+    exec(compile(sign_script.read_text(encoding='utf-8'),str(sign_script),'exec'),sign_ns)
 
 NAME='GP Arrow • Angle Arc'
 g=bpy.data.node_groups.get(NAME) or bpy.data.node_groups.new(NAME,'GeometryNodeTree')
@@ -68,6 +74,7 @@ socket('Thickness','Float',.025)
 socket('Color','Color',(1,.65,.1,1));socket('Opacity','Float',1.)
 socket('Show Arrowhead','Bool',True);socket('Head Length','Float',.15);socket('Head Width','Float',.12)
 socket('Show Label','Bool',False);socket('Label','String','θ');socket('Label Size','Float',.25)
+socket('Vector Sign','Bool',False,desc='Add mathematical vector notation above the label.')
 socket('Label Gap','Float',.15);socket('Label Offset','Vector',(0,0,0),desc='Additional offset in the plane basis: Vector 1, normal cross Vector 1, normal.')
 socket('Face Camera','Bool',True);socket('Use Label Color','Bool',False);socket('Label Color','Color',(1,1,1,1))
 i=node('NodeGroupInput');o=node('NodeGroupOutput')
@@ -125,6 +132,7 @@ anchor=vm('ADD',center,scale(middle,label_radius));ox,oy,oz=xyz(i.outputs['Label
 anchor=vm('ADD',anchor,vm('ADD',vm('ADD',scale(u,ox),scale(q,oy)),scale(normal,oz)))
 text=node('GeometryNodeGroup','Arc label');text.node_tree=bpy.data.node_groups['GP Arrow • Label (GP Text Nodes 5.2)']
 put(text,'String',i.outputs['Label']);put(text,'Size',i.outputs['Label Size']);put(text,'Font',bpy.data.fonts.get('Bfont Regular') or bpy.data.fonts.get('Bfont') or next(iter(bpy.data.fonts),None));put(text,'Face Active Camera',False)
+put(text,'Vector Sign',i.outputs['Vector Sign'])
 put(text,'Color',switch('RGBA',i.outputs['Use Label Color'],i.outputs['Color'],i.outputs['Label Color']));put(text,'Opacity',i.outputs['Opacity'])
 label_curves=to_curves(text.outputs[0]);p=node('GeometryNodeInputPosition').outputs[0];px,py,pz=xyz(p)
 plane_label=vm('ADD',anchor,vm('ADD',vm('ADD',scale(u,px),scale(q,py)),scale(normal,pz)))

@@ -80,6 +80,7 @@ sock(arrow,'Show Arrowhead','Bool',True)
 for s in list(arrow.interface.items_tree):
     if s.item_type=='SOCKET' and s.name=='Head Up':arrow.interface.remove(s)
 sock(arrow,'Show Label','Bool',False)
+sock(arrow,'Vector Sign','Bool',False,desc='Add a small vector arrow above the label.')
 sock(arrow,'Label','String','')
 sock(arrow,'Label Size','Float',0.25)
 sock(arrow,'Label Offset','Vector',(0.12,0.12,0))
@@ -127,9 +128,13 @@ headgeo=store(arrow,cc.outputs[0],'gp_arrow_head','BOOLEAN',True)
 label_group=bpy.data.node_groups.get('GP Arrow • Label (GP Text Nodes 5.2)')
 if not label_group:
     label_group=bpy.data.node_groups['GP Text Nodes 5.2'].copy();label_group.name='GP Arrow • Label (GP Text Nodes 5.2)';label_group.asset_clear()
+sign_script=ROOT/'scripts'/'build_vector_sign.py'
+if sign_script.exists():
+    sign_ns={'__file__':str(sign_script),'__name__':'__main__'}
+    exec(compile(sign_script.read_text(encoding='utf-8'),str(sign_script),'exec'),sign_ns)
 text=node(arrow,'GeometryNodeGroup','Axis-label text asset');text.node_tree=label_group
 text.inputs['Font'].default_value=bpy.data.fonts.get('Bfont Regular')
-for src,dst in [('Label','String'),('Label Size','Size'),('Opacity','Opacity'),('Face Camera','Face Active Camera')]:link(arrow,i.outputs[src],text.inputs[dst])
+for src,dst in [('Label','String'),('Label Size','Size'),('Opacity','Opacity'),('Face Camera','Face Active Camera'),('Vector Sign','Vector Sign')]:link(arrow,i.outputs[src],text.inputs[dst])
 link(arrow,switch(arrow,'RGBA',i.outputs['Use Label Color'],i.outputs['Color'],i.outputs['Label Color']),text.inputs['Color'])
 tr=node(arrow,'GeometryNodeTransform');link(arrow,text.outputs[0],tr.inputs['Geometry']);link(arrow,vm(arrow,'ADD',b,i.outputs['Label Offset']),tr.inputs['Translation'])
 labelgeo=tr.outputs[0]
@@ -251,7 +256,7 @@ sock(surface,'Surface Object','Object')
 sock(surface,'Length','Float',1.0)
 sock(surface,'Reverse Direction','Bool',False)
 sock(surface,'Create End Empty','Bool',True)
-styles=['Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
+styles=['Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Vector Sign','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
 for name in styles:
     s=next(s for s in arrow.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==name)
     default=s.default_value
@@ -354,7 +359,7 @@ for g,names in [(proj,['Create Start Empty','Create End Empty']),(parallel,['Cre
                         if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name in names:
                             getattr(mod.properties.inputs,s.identifier).value=True
         g['gp_arrow_empty_options_version']=1
-order=['Arrow','Start Position','End Position','Start Object','End Object','Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
+order=['Arrow','Start Position','End Position','Start Object','End Object','Thickness','Color','Opacity','Show Arrowhead','Head Length','Head Width','Show Label','Vector Sign','Label','Label Size','Label Offset','Face Camera','Use Label Color','Label Color']
 for index,name in enumerate(order):
     s=next((s for s in arrow.interface.items_tree if s.item_type=='SOCKET' and s.name==name),None)
     if s:arrow.interface.move(s,index)

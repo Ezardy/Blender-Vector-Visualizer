@@ -22,6 +22,12 @@ Add this Geometry Nodes modifier to an empty **Grease Pencil** object, then set 
 
 Enable **Show Label**, enter **Label**, and set its size and offset from the tip. **Face Camera** uses the active scene camera. Enable **Use Label Color** to choose an independent **Label Color**; otherwise the label follows the arrow color. The label uses a local copy of the same GP Text Nodes 5.2 asset as the existing axis labels, with the built-in font; it does not require that asset's external cache file.
 
+### Vector sign above labels
+
+Enable **Show Label**, then **Vector Sign**, for a mathematical right-pointing arrow above the label (vector notation). The sign fits the actual text width, stays above the glyphs, and scales with **Label Size**. It uses the label's color and opacity, including **Use Label Color**, and rotates together with the label when **Face Camera** is enabled. Empty label text produces no sign.
+
+The switch is available on **Object to Object**, **Closest Surface Normal**, **Perpendicular in Plane**, and **Angle Arc**. **Projection** and **Parallel from Origin** inherit the decorated label geometry from their preceding generator, just as they inherit its other label controls. No sign is added to the Segment Intersection asset, which has no label.
+
 ## GP Arrow • Project onto Plane
 
 Connect the first asset's **Arrow** output into this asset's **Arrow** input, or add it as the next modifier on the same Grease Pencil object.

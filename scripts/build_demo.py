@@ -22,12 +22,12 @@ def modifier(o,group,values=None):
             getattr(m.properties.inputs,s.identifier).value=values[s.name]
     return m
 start=empty('Arrow Start',(3,0,1));end=empty('Arrow End',(5,1,3))
-style={'Start Object':start,'End Object':end,'Show Label':True,'Label':'v'}
+style={'Start Object':start,'End Object':end,'Show Label':True,'Vector Sign':True,'Label':'v'}
 arrow=host('GP Arrow Example');modifier(arrow,'GP Arrow • Object to Object',style)
 projection=host('GP Arrow Projection Example');modifier(projection,'GP Arrow • Object to Object',{**style,'Color':(1,.25,.06,1),'Label':'v_xy','Face Camera':False});modifier(projection,'GP Arrow • Project onto Plane')
 parallel=host('GP Parallel Arrow Example',(3,-2,.5));modifier(parallel,'GP Arrow • Object to Object',style);modifier(parallel,'GP Arrow • Parallel from Origin',{'Length':1.5})
 bpy.ops.mesh.primitive_cube_add(size=2,location=(0,0,0));obstacle=bpy.context.object;obstacle.name='Obstacle'
-normal=host('GP Surface Normal Example',(1.3,-.5,.5));modifier(normal,'GP Arrow • Closest Surface Normal',{'Surface Object':obstacle,'Length':1.,'Color':(.15,1,.3,1),'Show Label':True,'Label':'n'})
+normal=host('GP Surface Normal Example',(1.3,-.5,.5));modifier(normal,'GP Arrow • Closest Surface Normal',{'Surface Object':obstacle,'Length':1.,'Color':(.15,1,.3,1),'Show Label':True,'Vector Sign':True,'Label':'n'})
 points=[empty(n,p) for n,p in [('Perpendicular V1 Start',(2,-3,.5)),('Perpendicular V1 End',(3,-3,.5)),('Perpendicular V2 Start',(2,-3,.5)),('Perpendicular V2 End',(2.5,-2,.5))]]
 perp=host('GP Perpendicular Arrow Example',(2,-3,.5));modifier(perp,'GP Arrow • Perpendicular in Plane',{**dict(zip(['Vector 1 Start','Vector 1 End','Vector 2 Start','Vector 2 End'],points)),'Length':1.2,'Color':(.65,.15,1,1),'Show Label':True,'Label':'p'})
 segstart=empty('Segment Start',(3,0,0));segend=empty('Segment End',(-3,0,0));segment=host('GP Segment Intersection Example');modifier(segment,'GP Arrow • Segment Intersection',{'Start Object':segstart,'End Object':segend,'Check Object':obstacle})
