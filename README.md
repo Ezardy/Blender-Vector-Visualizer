@@ -1,6 +1,6 @@
 # GP Arrows for Blender
 
-Six reusable Grease Pencil Geometry Nodes assets for arrows, projections, surface normals, and segment intersections. Tested with **Blender 5.2.3 LTS**.
+Seven reusable Grease Pencil Geometry Nodes assets for arrows, angle arcs, projections, surface normals, and segment intersections. The Angle Arc is tested with **Blender 5.3.0**; the earlier assets were originally checked with Blender 5.2.3 LTS.
 
 | Asset | Preview | Purpose |
 |---|---|---|
@@ -10,6 +10,7 @@ Six reusable Grease Pencil Geometry Nodes assets for arrows, projections, surfac
 | Closest Surface Normal | ![Normal](docs/images/icons/surface-normal.png) | Normal at the closest surface point |
 | Perpendicular in Plane | ![Perpendicular](docs/images/icons/perpendicular.png) | Perpendicular to one vector in a two-vector plane |
 | Segment Intersection | ![Intersection](docs/images/icons/segment-intersection.png) | First mesh intersection between two objects |
+| Angle Arc | ![Angle arc](docs/images/icons/angle-arc.png) | Directed arc between coplanar vectors; square right-angle marker |
 
 ## Installation
 
@@ -22,7 +23,7 @@ The arrow geometry works without the companion; managed Start/End/Intersection o
 
 Projected arrows retain 3D cone heads on their XY-projected shafts. Projection has independent **Create Start Empty** / **Create End Empty** switches; Normal, Parallel, and Perpendicular also have **Create End Empty** controls.
 
-See [the full asset guide](docs/USAGE.md). Open [the clean demo](examples/gp_arrows_demo.blend) for working examples of all six assets. The original personal working scene is excluded from Git.
+See [the full asset guide](docs/USAGE.md). Open [the clean demo](examples/gp_arrows_demo.blend) for working examples of all seven assets. The original personal working scene is excluded from Git.
 
 ## Repository layout
 

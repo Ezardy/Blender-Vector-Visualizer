@@ -11,6 +11,7 @@ ICONS={
     'GP Arrow • Closest Surface Normal':'surface-normal',
     'GP Arrow • Perpendicular in Plane':'perpendicular',
     'GP Arrow • Segment Intersection':'segment-intersection',
+    'GP Arrow • Angle Arc':'angle-arc',
 }
 for name,icon in ICONS.items():
     group=bpy.data.node_groups.get(name)

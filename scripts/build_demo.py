@@ -31,6 +31,9 @@ normal=host('GP Surface Normal Example',(1.3,-.5,.5));modifier(normal,'GP Arrow 
 points=[empty(n,p) for n,p in [('Perpendicular V1 Start',(2,-3,.5)),('Perpendicular V1 End',(3,-3,.5)),('Perpendicular V2 Start',(2,-3,.5)),('Perpendicular V2 End',(2.5,-2,.5))]]
 perp=host('GP Perpendicular Arrow Example',(2,-3,.5));modifier(perp,'GP Arrow • Perpendicular in Plane',{**dict(zip(['Vector 1 Start','Vector 1 End','Vector 2 Start','Vector 2 End'],points)),'Length':1.2,'Color':(.65,.15,1,1),'Show Label':True,'Label':'p'})
 segstart=empty('Segment Start',(3,0,0));segend=empty('Segment End',(-3,0,0));segment=host('GP Segment Intersection Example');modifier(segment,'GP Arrow • Segment Intersection',{'Start Object':segstart,'End Object':segend,'Check Object':obstacle})
+for name,center,second,radius,label in [('GP Arc Example',(-2,-3,1),(.5,.8660254,0),.7,'θ'),('GP Right Angle Example',(-2,-1,1),(0,1,0),.5,'90°')]:
+    p=Vector(center);origin=empty(name+' Origin',p);first=empty(name+' Vector 1',p+Vector((1,0,0)));last=empty(name+' Vector 2',p+Vector(second))
+    arc=host(name,p);modifier(arc,'GP Arrow • Angle Arc',{'Vector 1 Start':origin,'Vector 1 End':first,'Vector 2 Start':origin,'Vector 2 End':last,'Radius':radius,'Show Label':True,'Label':label,'Face Camera':False})
 camera=bpy.data.objects.new('Demo Camera',bpy.data.cameras.new('Demo Camera'));bpy.context.scene.collection.objects.link(camera);camera.location=(11,-15,10);camera.rotation_euler=(Vector((2,-.5,1))-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.type='ORTHO';camera.data.ortho_scale=11;bpy.context.scene.camera=camera
 bpy.context.view_layer.update()
 spec=importlib.util.spec_from_file_location('gp_arrow_demo_helper',ROOT/'scripts'/'gp_arrow_objects.py');helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);helper.update_now();bpy.context.view_layer.update()

@@ -372,8 +372,14 @@ for g in [arrow,proj,parallel,surface,perp,intersection]:
     g.asset_mark();g.asset_data.description=g.description
     for tag in ['Grease Pencil','Arrow','Geometry Nodes']:g.asset_data.tags.new(tag)
 
+arc_script=ROOT/'scripts'/'build_arc_asset.py'
+if arc_script.exists():
+    arc_ns={'__file__':str(arc_script),'__name__':'__main__'}
+    exec(compile(arc_script.read_text(encoding='utf-8'),str(arc_script),'exec'),arc_ns)
 preview_script=ROOT/'scripts'/'apply_asset_icons.py'
 if preview_script.exists():
     preview_ns={'__file__':str(preview_script),'__name__':'__main__'}
     exec(compile(preview_script.read_text(encoding='utf-8'),str(preview_script),'exec'),preview_ns)
-result={'groups':[g.name for g in [arrow,proj,parallel,surface,perp,intersection]],'nodes':[len(g.nodes) for g in [arrow,proj,parallel,surface,perp,intersection]]}
+built_groups=[arrow,proj,parallel,surface,perp,intersection]
+if bpy.data.node_groups.get('GP Arrow • Angle Arc'):built_groups.append(bpy.data.node_groups['GP Arrow • Angle Arc'])
+result={'groups':[g.name for g in built_groups],'nodes':[len(g.nodes) for g in built_groups]}

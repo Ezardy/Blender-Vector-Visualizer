@@ -62,6 +62,10 @@ def generate():
     c=Canvas('#61e69d');c.plane();c.arrow((128,163),(128,37));c.line((128,143),(146,149),'#e8f2ff',3);c.line((146,149),(146,168),'#e8f2ff',3);c.circle((128,163),6,'#e8f2ff');c.save('surface-normal')
     c=Canvas('#bc95ff');c.polygon([(42,212),(218,212),(218,42),(42,42)],'#202b3e');c.arrow((65,190),(216,190),'#91a1b6',5);c.arrow((65,190),(124,61),'#53657c',5);c.arrow((65,190),(65,47));c.line((65,167),(88,167),'#e8f2ff',3);c.line((88,167),(88,190),'#e8f2ff',3);c.save('perpendicular')
     c=Canvas('#ff81aa');c.plane();c.line((45,205),(208,48),'#91a1b6',6);c.circle((45,205),6,'#e8f2ff');c.circle((208,48),6,'#e8f2ff');c.circle((126,127),14,c.accent);c.circle((126,127),6,'#131926');c.line((103,127),(149,127),c.accent,3);c.line((126,104),(126,150),c.accent,3);c.save('segment-intersection')
-    print(f'Generated six SVG and PNG icons in {OUT}')
+    c=Canvas('#ffd166');origin=(60,200);c.line(origin,(220,200),'#53657c',4);c.line(origin,(115,49),'#53657c',4)
+    arc=[(60+110*math.cos(math.radians(-70*k/40)),200+110*math.sin(math.radians(-70*k/40))) for k in range(41)]
+    for a,b in zip(arc[:32],arc[1:33]):c.line(a,b,c.accent,8)
+    c.arrow(arc[32],arc[-1]);c.circle(origin,6,'#e8f2ff');c.save('angle-arc')
+    print(f'Generated seven SVG and PNG icons in {OUT}')
 
 if __name__=='__main__':generate()

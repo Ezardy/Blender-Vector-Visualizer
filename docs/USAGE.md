@@ -2,7 +2,7 @@
 
 Created and checked in Blender 5.2.3 LTS.
 
-The six node groups are marked as assets in `assets/gp_arrow_assets.blend`. Add the repository's `assets` directory as an Asset Library in Blender Preferences, or append the node groups from that file. A clean example scene is available at `examples/gp_arrows_demo.blend`; with that file open, choose **Current File** in the Asset Browser and search for **GP Arrow**.
+The seven node groups are marked as assets in `assets/gp_arrow_assets.blend`. Add the repository's `assets` directory as an Asset Library in Blender Preferences, or append the node groups from that file. A clean example scene is available at `examples/gp_arrows_demo.blend`; with that file open, choose **Current File** in the Asset Browser and search for **GP Arrow**.
 
 ## Real endpoint and intersection objects
 
@@ -58,6 +58,20 @@ Set **Vector 1 Start**, **Vector 1 End**, **Vector 2 Start**, and **Vector 2 End
 The first vector sets the directed orientation: reversing Vector 1 reverses the arrow. Vector 2 supplies the plane, so reversing Vector 2 alone leaves the arrow direction unchanged. The convention chooses a world-space unit plane normal whose largest absolute component is positive, then uses **normal cross Vector 1**. Thus, for the XY plane, +X produces +Y and +Y produces -X. **Reverse Direction** selects the opposite result. This fixed convention has an orientation seam where the dominant plane-normal component changes sign; use Reverse Direction to choose the desired side.
 
 The calculation remains perpendicular in world space with rotated/nonuniformly scaled hosts. **Length** uses host local units. All four object inputs must be assigned. Zero-length or parallel spanning vectors produce empty geometry; the group exposes **Valid Plane** and the host-local **Direction**. Outputs are compatible with the GP Projection and Parallel from Origin modifiers.
+
+## GP Arrow • Angle Arc
+
+Set **Vector 1 Start/End** and **Vector 2 Start/End** to object origins. The vectors point End minus Start. Their infinite lines must intersect within **Coplanarity Tolerance** (world units). Their intersection is the arc center, including when the vector tails differ. Skew lines, parallel directions, zero-length vectors, and a zero radius produce no geometry. All four references must be assigned; shared references for a common origin are supported.
+
+**Radius** uses world units. **Clockwise** selects the clockwise sweep from Vector 1 toward Vector 2; off selects counterclockwise. The alternate direction may be a reflex angle. Direction is viewed from the positive canonical plane normal: the unit normal whose largest absolute world component is positive. In XY, +X to +Y is 90° counterclockwise or 270° clockwise. As with the Perpendicular asset, the canonical orientation can change at a dominant-axis boundary.
+
+A selected **90° sweep** within **Right Angle Tolerance** (degrees) uses the standard square corner marker instead of a curved arc. Its two legs lie parallel to the input vectors; the vectors themselves complete the visual square. A 270° sweep between the same perpendicular vectors remains an arc. The arrowhead remains available on the marker.
+
+**Resolution**, **Thickness**, **Color**, **Opacity**, **Show Arrowhead**, **Head Length**, and **Head Width** control the GP stroke and reused conical GP Arrow head. Head length is limited for small radii/sweeps. **Show Label** places the custom **Label** text near the sweep midpoint. **Label Gap** adjusts its radial distance; **Label Offset** follows the plane basis (Vector 1, normal cross Vector 1, normal). **Face Camera** uses the active scene camera; off places the label in the arc plane. **Use Label Color** enables a separate **Label Color**.
+
+The group outputs the GP **Arc**, **Valid Plane**, the selected **Angle** magnitude in radians, **Right Angle**, and the host-local **Center**. Arc calculations use world space and are converted into the host's coordinates, so rotated and nonuniformly scaled hosts preserve the intended circular arc. This asset does not automatically create child empties.
+
+The demo includes **GP Arc Example** (60°) and **GP Right Angle Example** (90°).
 
 ## GP Arrow • Segment Intersection
 
