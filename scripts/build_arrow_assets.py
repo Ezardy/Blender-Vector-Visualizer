@@ -128,6 +128,10 @@ headgeo=store(arrow,cc.outputs[0],'gp_arrow_head','BOOLEAN',True)
 label_group=bpy.data.node_groups.get('GP Arrow • Label (GP Text Nodes 5.2)')
 if not label_group:
     label_group=bpy.data.node_groups['GP Text Nodes 5.2'].copy();label_group.name='GP Arrow • Label (GP Text Nodes 5.2)';label_group.asset_clear()
+facing_script=ROOT/'scripts'/'fix_label_facing.py'
+if facing_script.exists():
+    facing_ns={'__file__':str(facing_script),'__name__':'__main__'}
+    exec(compile(facing_script.read_text(encoding='utf-8'),str(facing_script),'exec'),facing_ns)
 sign_script=ROOT/'scripts'/'build_vector_sign.py'
 if sign_script.exists():
     sign_ns={'__file__':str(sign_script),'__name__':'__main__'}

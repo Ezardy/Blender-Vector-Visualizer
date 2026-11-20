@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-bl_info = {'name': 'GP Arrow Objects', 'author': 'Blender Visualizer', 'version': (1, 0, 2), 'blender': (5, 2, 0), 'category': 'Object', 'description': 'Maintain optional real child empties for GP Arrow endpoints and segment intersections.'}
+bl_info = {'name': 'GP Arrow Objects', 'author': 'Blender Visualizer', 'version': (1, 0, 3), 'blender': (5, 2, 0), 'category': 'Object', 'description': 'Maintain optional real child empties for GP Arrow endpoints and segment intersections.'}
 
 import bpy
 from bpy.app.handlers import persistent
@@ -85,6 +85,7 @@ def update_now(scene=None, depsgraph=None):
     try:
         scene = scene if isinstance(scene, bpy.types.Scene) else bpy.context.scene
         depsgraph = depsgraph or bpy.context.evaluated_depsgraph_get()
+        pending = []
         for host in list(scene.objects):
             if host.get(ROLE) or host.type != 'GREASEPENCIL' or host.library:
                 continue
@@ -103,16 +104,19 @@ def update_now(scene=None, depsgraph=None):
             roles.extend((o.get(ROLE), None) for o in host.children if o.get(ROLE) and o.get(ROLE) not in {r[0] for r in roles})
             if not roles:
                 continue
-            for role, attr in roles:
-                child = _child(host, role)
-                point = _point(ev, attr) if attr else None
-                valid = point is not None
-                if child.get('GP Arrow Valid') != valid:
-                    child['GP Arrow Valid'] = valid
-                if child.hide_get() == valid:
-                    child.hide_set(not valid)
-                if valid and (child.location - point).length > 1e-6:
-                    child.location = point
+            # Copy all evaluated values before creating/hiding/moving any objects.
+            # hide_set and collection linking can rebuild the dependency graph,
+            # invalidating evaluated GP drawings, even for another host.
+            pending.extend((host, role, _point(ev, attr) if attr else None) for role, attr in roles)
+        for host, role, point in pending:
+            child = _child(host, role)
+            valid = point is not None
+            if child.get('GP Arrow Valid') != valid:
+                child['GP Arrow Valid'] = valid
+            if child.hide_get() == valid:
+                child.hide_set(not valid)
+            if valid and (child.location - point).length > 1e-6:
+                child.location = point
         _dirty = False
     finally:
         _busy = False
@@ -125,7 +129,10 @@ def _changed(*args):
 
 @persistent
 def _frame(scene, depsgraph=None):
-    update_now(scene, depsgraph)
+    # Frame evaluation and viewport refresh may run on different threads.
+    # Object visibility/linking changes here can invalidate Blender's bases
+    # during its new-frame refresh. Flush from the main-loop timer instead.
+    _changed()
 
 @persistent
 def _save(*args):

@@ -21,6 +21,8 @@ Seven reusable Grease Pencil Geometry Nodes assets for arrows, angle arcs, proje
 
 The arrow geometry works without the companion; managed Start/End/Intersection objects require it. Length, thickness, color, conical heads, optional labels, and camera-facing label controls are provided where applicable.
 
+The companion updates managed empties from Blender's main-loop timer (about 0.1 seconds after a change). Frame changes schedule an update instead of changing object visibility during dependency-graph evaluation. Camera-facing labels compensate for parent and host rotation and scale.
+
 Projected arrows retain 3D cone heads on their XY-projected shafts. Projection has independent **Create Start Empty** / **Create End Empty** switches; Normal, Parallel, and Perpendicular also have **Create End Empty** controls.
 
 Enable **Show Label → Vector Sign** to add a fitted right-pointing vector arrow above the label. It follows label size, color, opacity, and camera-facing/planar orientation. Object to Object, Surface Normal, Perpendicular, and Angle Arc expose the switch; Projection and Parallel inherit the source label's setting.
