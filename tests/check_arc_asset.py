@@ -18,7 +18,7 @@ try:
     for name,p in zip(('Vector 1 Start','Vector 1 End','Vector 2 Start','Vector 2 End'),points):value(name,p)
     value('Radius',1.);value('Show Label',True);value('Label','theta');value('Use Label Color',True);value('Label Color',(.9,.1,.3,1));value('Show Arrowhead',True)
     def geometry():
-        bpy.context.view_layer.update();ev=host.evaluated_get(bpy.context.evaluated_depsgraph_get());out={'stroke':[],'head':[],'label':[],'metadata':None,'colors':[],'strokes':0}
+        bpy.context.view_layer.update();ev=host.evaluated_get(bpy.context.evaluated_depsgraph_get());out={'stroke':[],'head':[],'label':[],'label_handles':[],'metadata':None,'colors':[],'strokes':0}
         for layer in ev.data.layers:
             for frame in layer.frames:
                 d=frame.drawing;out['strokes']+=len(d.strokes)
@@ -31,6 +31,11 @@ try:
                     for name,attr in (('stroke','gp_arc_stroke'),('head','gp_arrow_head'),('label','gp_arc_label')):
                         a=d.attributes.get(attr)
                         if a and a.data[idx].value:out[name].append(world)
+                    label=d.attributes.get('gp_arc_label')
+                    if label and label.data[idx].value:
+                        for name in ('handle_left','handle_right'):
+                            handles=d.attributes.get(name)
+                            if handles:out['label_handles'].append(host.matrix_world@layer.matrix_local@Vector(handles.data[idx].vector))
                 if d.attributes.get('fill_color'):out['colors'].extend(tuple(x.color) for x in d.attributes['fill_color'].data)
         assert not [w.message for w in mod.node_warnings],[w.message for w in mod.node_warnings]
         return out
@@ -58,10 +63,13 @@ try:
     for obj,p in zip(points,(center,center+u3,center,center+v3)):obj.location=p;obj.update_tag()
     value('Show Arrowhead',True);value('Show Label',True);value('Face Camera',False);tilted=geometry()
     assert max(abs((p-center).dot(n3)) for p in tilted['stroke']+tilted['label'])<1e-5
+    assert tilted['label_handles']
+    assert max(abs((p-center).dot(n3)) for p in tilted['label_handles'])<1e-5, 'Planar glyph Bezier handles must rotate with control points'
     value('Face Camera',True);facing=geometry()
     if bpy.context.scene.camera:
         camera_normal=(bpy.context.scene.camera.matrix_world.to_quaternion()@Vector((0,0,1))).normalized()
         assert max(abs((p-facing['label'][0]).dot(camera_normal)) for p in facing['label'])<1e-5
+        assert max(abs((p-facing['label'][0]).dot(camera_normal)) for p in facing['label_handles'])<1e-5, 'Camera-facing glyph handles must remain in the label plane'
     points[2].location.z+=.5;points[3].location.z+=.5;points[2].update_tag();points[3].update_tag();assert geometry()['metadata'] is None
     points[1].location=center+u;points[2].location=center;points[3].location=center+u
     for p in points:p.update_tag()

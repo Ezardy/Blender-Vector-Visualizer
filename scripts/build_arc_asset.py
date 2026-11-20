@@ -134,12 +134,12 @@ text=node('GeometryNodeGroup','Arc label');text.node_tree=bpy.data.node_groups['
 put(text,'String',i.outputs['Label']);put(text,'Size',i.outputs['Label Size']);put(text,'Font',bpy.data.fonts.get('Bfont Regular') or bpy.data.fonts.get('Bfont') or next(iter(bpy.data.fonts),None));put(text,'Face Active Camera',False)
 put(text,'Vector Sign',i.outputs['Vector Sign'])
 put(text,'Color',switch('RGBA',i.outputs['Use Label Color'],i.outputs['Color'],i.outputs['Label Color']));put(text,'Opacity',i.outputs['Opacity'])
-label_curves=to_curves(text.outputs[0]);p=node('GeometryNodeInputPosition').outputs[0];px,py,pz=xyz(p)
-plane_label=vm('ADD',anchor,vm('ADD',vm('ADD',scale(u,px),scale(q,py)),scale(normal,pz)))
+label_curves=to_curves(text.outputs[0])
+plane_rotation=node('FunctionNodeAxesToRotation','Label plane basis');plane_rotation.primary_axis='X';plane_rotation.secondary_axis='Y';put(plane_rotation,'Primary Axis',u);put(plane_rotation,'Secondary Axis',q)
 camera=node('GeometryNodeInputActiveCamera');info=node('GeometryNodeObjectInfo','Active camera orientation');info.transform_space='ORIGINAL';put(info,'Object',camera.outputs[0])
-rotate=node('ShaderNodeVectorRotate');rotate.rotation_type='EULER_XYZ';put(rotate,'Vector',p);put(rotate,'Rotation',info.outputs['Rotation'])
-camera_label=vm('ADD',anchor,rotate.outputs[0])
-lp=node('GeometryNodeSetPosition','Label at selected sweep midpoint');put(lp,0,label_curves);put(lp,'Position',switch('VECTOR',i.outputs['Face Camera'],plane_label,camera_label))
+# Transform entire curves: Set Position rotates control points but only
+# translates their Bezier handles, distorting filled glyph outlines.
+lp=node('GeometryNodeTransform','Label at selected sweep midpoint');put(lp,'Geometry',label_curves);put(lp,'Translation',anchor);put(lp,'Rotation',switch('ROTATION',i.outputs['Face Camera'],plane_rotation.outputs[0],info.outputs['Rotation']))
 label=store(to_gp(lp.outputs[0]),'gp_arc_label','BOOLEAN',True);label=switch('GEOMETRY',i.outputs['Show Label'],None,label)
 
 selfnode=node('GeometryNodeSelfObject');host=node('GeometryNodeObjectInfo','Host world transform');host.transform_space='ORIGINAL';put(host,'Object',selfnode.outputs[0])
